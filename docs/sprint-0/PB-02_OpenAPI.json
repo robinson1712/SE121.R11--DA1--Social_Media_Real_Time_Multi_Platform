@@ -1,0 +1,4924 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "SE121.R11 — Đồ án 1 | G1 Place, Proposal, Post, Review, Rating",
+    "version": "0.2.0",
+    "description": "Hợp đồng thiết kế của PB-02 (#3), theo SRS v1.4, D-06/PB-01 (#2), ngày 20/11/2026. 18 thao tác/15 paths; không bao phủ API đăng ký Auth. Contract runtime FE↔BE cần xác nhận riêng; không suy ra từ schema."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Cùng origin API Gateway. Môi trường cấu hình riêng khi tích hợp."
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Place"
+    },
+    {
+      "name": "Proposal"
+    },
+    {
+      "name": "Post"
+    },
+    {
+      "name": "Review"
+    },
+    {
+      "name": "Rating"
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "login",
+        "summary": "Đăng nhập qua Auth",
+        "description": "Route hiện hữu dùng email và password. Sau login, client gửi accessToken bằng Authorization Bearer. Không đưa token lên URL HTTP.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-01"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResultEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/places": {
+      "get": {
+        "tags": [
+          "Place"
+        ],
+        "operationId": "listPlaces",
+        "summary": "Tìm và lọc Place",
+        "description": "Khách hoặc User. Chỉ tìm theo tên/địa chỉ, lọc category, tiện ích, Rating và thuộc tính. Không áp bộ lọc giá/khu vực trong P0.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Size"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Tên hoặc địa chỉ."
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            }
+          },
+          {
+            "name": "minRating",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          {
+            "name": "attributeIds",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Id"
+              },
+              "uniqueItems": true
+            },
+            "description": "Lọc theo thuộc tính đã phân loại theo logic nghiệp vụ."
+          },
+          {
+            "name": "amenityIds",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Id"
+              },
+              "uniqueItems": true
+            },
+            "description": "Tiện ích lấy từ nguồn khai báo, tách nguồn khỏi Review Attribute."
+          }
+        ],
+        "x-srs-references": [
+          "FR-04",
+          "FR-07",
+          "AT-38"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacePageEnvelope"
+                },
+                "examples": {
+                  "active": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "content": [
+                          {
+                            "id": "place-25",
+                            "name": "Cà phê học nhóm",
+                            "primaryCategoryId": "cafe",
+                            "secondaryCategoryIds": [],
+                            "businessStatus": "ACTIVE",
+                            "recordStatus": "ACTIVE",
+                            "location": {
+                              "address": "268 Lý Thường Kiệt, TP.HCM",
+                              "latitude": 10.7735,
+                              "longitude": 106.659
+                            }
+                          }
+                        ],
+                        "page": 0,
+                        "size": 20,
+                        "totalElements": 1,
+                        "totalPages": 1,
+                        "last": true
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/places/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Place"
+        ],
+        "operationId": "getPlace",
+        "summary": "Xem chi tiết Place",
+        "description": "Trả location.address và cặp latitude/longitude đã xác minh. Với Place legacy thiếu ghim, latitude/longitude cùng null. Trạng thái đóng cửa giữ lịch sử đọc theo quyền.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-srs-references": [
+          "FR-04",
+          "FR-21",
+          "FR-23",
+          "AT-42",
+          "AT-45"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceEnvelope"
+                },
+                "examples": {
+                  "active": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "place-25",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "secondaryCategoryIds": [],
+                        "businessStatus": "ACTIVE",
+                        "recordStatus": "ACTIVE",
+                        "location": {
+                          "address": "268 Lý Thường Kiệt, TP.HCM",
+                          "latitude": 10.7735,
+                          "longitude": 106.659
+                        }
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "temporarilyClosed": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "place-25",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "secondaryCategoryIds": [],
+                        "businessStatus": "TEMPORARILY_CLOSED",
+                        "recordStatus": "ACTIVE",
+                        "location": {
+                          "address": "268 Lý Thường Kiệt, TP.HCM",
+                          "latitude": 10.7735,
+                          "longitude": 106.659
+                        }
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "legacyWithoutPin": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "place-25",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "secondaryCategoryIds": [],
+                        "businessStatus": "ACTIVE",
+                        "recordStatus": "ACTIVE",
+                        "location": {
+                          "address": "268 Lý Thường Kiệt, TP.HCM",
+                          "latitude": null,
+                          "longitude": null
+                        }
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Place"
+        ],
+        "operationId": "updatePlace",
+        "summary": "Quản lý Place P0",
+        "description": "Route đề xuất cho ADMIN. Thay đổi tên/category/vị trí đã xác minh hoặc trạng thái kinh doanh. Tạm đóng cho tạo SHARE, chặn REVIEW mới. Đóng vĩnh viễn chặn mutation mới trên nội dung gắn Place.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacePatch"
+              },
+              "examples": {
+                "temporarilyClose": {
+                  "value": {
+                    "businessStatus": "TEMPORARILY_CLOSED"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-04",
+          "FR-20",
+          "FR-21",
+          "BR-37",
+          "BR-40"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceEnvelope"
+                },
+                "examples": {
+                  "temporarilyClosed": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "place-25",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "secondaryCategoryIds": [],
+                        "businessStatus": "TEMPORARILY_CLOSED",
+                        "recordStatus": "ACTIVE",
+                        "location": {
+                          "address": "268 Lý Thường Kiệt, TP.HCM",
+                          "latitude": 10.7735,
+                          "longitude": 106.659
+                        }
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/Unprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/places/{id}/posts": {
+      "get": {
+        "tags": [
+          "Place"
+        ],
+        "operationId": "listPlacePosts",
+        "summary": "Xem bài đã xuất bản tại Place",
+        "description": "Guest/stranger chỉ xem REVIEW FRIENDS ẩn danh read-only tại Place. SHARE FRIENDS bị loại ngoài quyền. Friend/tác giả/Fanpage đúng Place nhận projection theo quyền, có kiểm Block. Không trả bài chờ hoặc đã gỡ.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Size"
+          },
+          {
+            "name": "actingFanpageId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "description": "Chỉ cho projection đọc theo ngữ cảnh Fanpage. Backend xác minh quyền quản trị và Official Fanpage đúng Place. Không phải actor để chấm hoặc tạo REVIEW."
+          }
+        ],
+        "x-srs-references": [
+          "FR-09",
+          "BR-09",
+          "AT-06",
+          "AT-07",
+          "AT-09",
+          "AT-30"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacePostPageEnvelope"
+                },
+                "examples": {
+                  "stranger": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "content": [
+                          {
+                            "postId": "review-102",
+                            "postType": "REVIEW",
+                            "visibility": "FRIENDS",
+                            "placeId": "place-25",
+                            "accessMode": "ANONYMOUS_READ_ONLY",
+                            "author": null,
+                            "authorDisplay": "Người dùng ẩn danh",
+                            "content": "Quán phù hợp học tập.",
+                            "publishStatus": "PUBLISHED",
+                            "permissions": {
+                              "canViewAuthor": false,
+                              "canReact": false,
+                              "canComment": false,
+                              "canRate": false
+                            }
+                          }
+                        ],
+                        "page": 0,
+                        "size": 20,
+                        "totalElements": 1,
+                        "totalPages": 1,
+                        "last": true
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "friend": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "content": [
+                          {
+                            "postId": "review-102",
+                            "postType": "REVIEW",
+                            "visibility": "FRIENDS",
+                            "placeId": "place-25",
+                            "accessMode": "FULL",
+                            "author": {
+                              "id": "user-1"
+                            },
+                            "content": "Quán phù hợp học tập.",
+                            "publishStatus": "PUBLISHED",
+                            "permissions": {
+                              "canViewAuthor": true,
+                              "canReact": true,
+                              "canComment": true,
+                              "canRate": false
+                            },
+                            "review": {
+                              "authorScore": 4
+                            }
+                          }
+                        ],
+                        "page": 0,
+                        "size": 20,
+                        "totalElements": 1,
+                        "totalPages": 1,
+                        "last": true
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "private, no-store đối với response theo viewer hoặc context. Cache trung gian không dùng lại giữa người dùng.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/places/{id}/rating": {
+      "get": {
+        "tags": [
+          "Place"
+        ],
+        "operationId": "getPlaceRating",
+        "summary": "Xem điểm Place",
+        "description": "Chỉ dùng REVIEW đủ điều kiện mới nhất theo publishedAt cho mỗi tác giả. R là trung bình trọng số P, nReview là số REVIEW được dùng. nReview=0 trả rating null.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "x-srs-references": [
+          "FR-13",
+          "BR-03",
+          "BR-08",
+          "AT-14",
+          "AT-24"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceRatingEnvelope"
+                },
+                "examples": {
+                  "scored": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "placeId": "place-25",
+                        "rating": 4,
+                        "nReview": 1,
+                        "summaryVersion": 7
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "empty": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "placeId": "place-25",
+                        "rating": null,
+                        "nReview": 0,
+                        "summaryVersion": 1
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/places/{id}/attributes": {
+      "get": {
+        "tags": [
+          "Place"
+        ],
+        "operationId": "getPlaceAttributes",
+        "summary": "Xem ưu và nhược điểm",
+        "description": "Mỗi tác giả chỉ có một câu trả lời hiệu lực cho từng thuộc tính. Mặc định tối đa 5 ưu và 2 nhược. expanded=true mở hai nhóm đã phân loại theo ngưỡng trên 50%.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "name": "expanded",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "x-srs-references": [
+          "FR-15",
+          "FR-16",
+          "D-02",
+          "D-05",
+          "AT-25–29"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceAttributesEnvelope"
+                },
+                "examples": {
+                  "aggregate": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "placeId": "place-25",
+                        "advantages": [
+                          {
+                            "attributeId": "drink-quality",
+                            "name": "Chất lượng đồ uống",
+                            "averageScore": 4.6,
+                            "respondents": 20,
+                            "positiveRatio": 0.9
+                          }
+                        ],
+                        "disadvantages": [],
+                        "hasMore": false
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/place-proposals": {
+      "post": {
+        "tags": [
+          "Proposal"
+        ],
+        "operationId": "createPlaceProposal",
+        "summary": "Tạo đề xuất Place",
+        "description": "User gửi ít nhất một imageId đã upload. Giữ PENDING đến khi Admin quyết định. Quyền đề xuất không tạo quyền sở hữu Place.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalCreate"
+              },
+              "examples": {
+                "addressOnly": {
+                  "value": {
+                    "name": "Cà phê học nhóm",
+                    "primaryCategoryId": "cafe",
+                    "imageIds": [
+                      "media-01"
+                    ],
+                    "address": "268 Lý Thường Kiệt, TP.HCM"
+                  }
+                },
+                "withPin": {
+                  "value": {
+                    "name": "Cà phê học nhóm",
+                    "primaryCategoryId": "cafe",
+                    "imageIds": [
+                      "media-01"
+                    ],
+                    "address": "268 Lý Thường Kiệt, TP.HCM",
+                    "latitude": 10.7735,
+                    "longitude": 106.659
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-05",
+          "BR-12",
+          "BR-33",
+          "D-07",
+          "AT-01",
+          "AT-41",
+          "AT-44"
+        ],
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalEnvelope"
+                },
+                "examples": {
+                  "pending": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "proposal-17",
+                        "status": "PENDING",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "imageIds": [
+                          "media-01"
+                        ],
+                        "address": "268 Lý Thường Kiệt, TP.HCM",
+                        "createdAt": "2026-11-16T02:00:00Z"
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "description": "Thiếu ảnh, category hoặc dữ liệu vị trí không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "badCoordinates": {
+                    "value": {
+                      "success": false,
+                      "message": "Tọa độ nằm ngoài phạm vi hợp lệ.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "VALIDATION_ERROR",
+                      "details": {
+                        "fieldErrors": {
+                          "latitude": "latitude phải thuộc [-90,90]",
+                          "longitude": "longitude phải thuộc [-180,180]"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/place-proposals/{id}/decision": {
+      "post": {
+        "tags": [
+          "Proposal"
+        ],
+        "operationId": "decidePlaceProposal",
+        "summary": "Duyệt hoặc từ chối đề xuất",
+        "description": "ADMIN. Khi approve, backend kiểm vị trí gồm địa chỉ và tọa độ xác nhận, tạo hoặc liên kết đúng một Place theo kết quả duyệt. Kết quả là quyết định Proposal, xử lý bài chờ có thể chạy sau commit. Retry cùng quyết định không tạo Place thứ hai. Quyết định ngược trạng thái đã chốt trả 409.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDecision"
+              },
+              "examples": {
+                "approveAndVerifyLocation": {
+                  "value": {
+                    "decision": "APPROVE",
+                    "location": {
+                      "address": "268 Lý Thường Kiệt, TP.HCM",
+                      "latitude": 10.7735,
+                      "longitude": 106.659
+                    }
+                  }
+                },
+                "reject": {
+                  "value": {
+                    "decision": "REJECT",
+                    "reason": "Ảnh không đủ căn cứ xác minh."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-06",
+          "BR-34",
+          "D-03",
+          "AT-03",
+          "AT-04",
+          "AT-22"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalEnvelope"
+                },
+                "examples": {
+                  "approved": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "proposal-17",
+                        "status": "APPROVED",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "imageIds": [
+                          "media-01"
+                        ],
+                        "address": "268 Lý Thường Kiệt, TP.HCM",
+                        "createdAt": "2026-11-16T02:00:00Z",
+                        "latitude": 10.7735,
+                        "longitude": 106.659,
+                        "placeId": "place-25"
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "rejected": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "proposal-17",
+                        "status": "REJECTED",
+                        "name": "Cà phê học nhóm",
+                        "primaryCategoryId": "cafe",
+                        "imageIds": [
+                          "media-01"
+                        ],
+                        "address": "268 Lý Thường Kiệt, TP.HCM",
+                        "createdAt": "2026-11-16T02:00:00Z",
+                        "rejectionReason": "Ảnh không đủ căn cứ xác minh."
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/Unprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/posts": {
+      "post": {
+        "tags": [
+          "Post"
+        ],
+        "operationId": "createPost",
+        "summary": "Tạo SHARE, REVIEW hoặc Post legacy",
+        "description": "Nhánh mới yêu cầu đúng một Place hoặc Proposal, có content hoặc media. SHARE không có review. REVIEW cá nhân cần sao tác giả, khóa cooldown theo author/Place. Proposal PENDING tạo PENDING_PLACE và chưa public. Server còn nhận POST legacy trong giai đoạn chuyển đổi. Sau cutover, bài người dùng mới phải theo nhánh có postType và Place hoặc Proposal. Bản ghi legacy hiện có vẫn đọc được qua GET và chỉnh theo PUT legacy.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Bắt buộc gửi cho Post có postType mới. Post legacy tiếp tục nhận request không có header. Backend cần cho phép header ở CORS."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCreate"
+              },
+              "examples": {
+                "share": {
+                  "value": {
+                    "postType": "SHARE",
+                    "placeId": "place-25",
+                    "visibility": "PUBLIC",
+                    "content": "Quán đang sửa, mình hẹn dịp khác."
+                  }
+                },
+                "review": {
+                  "value": {
+                    "postType": "REVIEW",
+                    "placeId": "place-25",
+                    "visibility": "FRIENDS",
+                    "content": "Quán có đồ uống ngon, phù hợp học tập.",
+                    "mediaIds": [
+                      "media-01"
+                    ],
+                    "review": {
+                      "authorScore": 4,
+                      "attributes": [
+                        {
+                          "attributeId": "drink-quality",
+                          "score": 5
+                        }
+                      ]
+                    }
+                  }
+                },
+                "pendingReview": {
+                  "value": {
+                    "postType": "REVIEW",
+                    "placeProposalId": "proposal-17",
+                    "visibility": "FRIENDS",
+                    "content": "Bài chờ duyệt địa điểm.",
+                    "review": {
+                      "authorScore": 4
+                    }
+                  }
+                },
+                "legacy": {
+                  "value": {
+                    "content": "Bài cũ chưa gắn Place",
+                    "privacy": "PRIVATE",
+                    "mediaUrls": []
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-06",
+          "FR-08",
+          "FR-09",
+          "FR-11",
+          "FR-21",
+          "AT-05",
+          "AT-23",
+          "AT-39",
+          "AT-49"
+        ],
+        "responses": {
+          "201": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostCreateResultEnvelope"
+                },
+                "examples": {
+                  "review": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "postId": "review-102",
+                        "postType": "REVIEW",
+                        "placeId": "place-25",
+                        "visibility": "FRIENDS",
+                        "publishStatus": "PUBLISHED",
+                        "editCount": 0,
+                        "version": 1
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "pendingReview": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "postId": "review-103",
+                        "postType": "REVIEW",
+                        "placeProposalId": "proposal-17",
+                        "visibility": "FRIENDS",
+                        "publishStatus": "PENDING_PLACE",
+                        "editCount": 0,
+                        "version": 1
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "legacyPrivate": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "6afd9b4b-5367-433e-87c9-6d3a5848dea7",
+                        "authorId": "user-1",
+                        "content": "Bài cũ chưa gắn Place",
+                        "privacy": "PRIVATE",
+                        "mediaUrls": [],
+                        "createdAt": "2026-10-25T03:00:00Z",
+                        "commentCount": 0,
+                        "reactionCount": 0,
+                        "shareCount": 0,
+                        "pinned": false
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Place không cho phép loại bài hoặc REVIEW chưa hết cooldown.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "reviewAtTemporaryClosure": {
+                    "value": {
+                      "success": false,
+                      "message": "Place tạm đóng không nhận REVIEW mới.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "PLACE_CLOSED",
+                      "details": {
+                        "businessStatus": "TEMPORARILY_CLOSED"
+                      }
+                    }
+                  },
+                  "shareAtPermanentClosure": {
+                    "value": {
+                      "success": false,
+                      "message": "Place đóng vĩnh viễn không nhận bài mới.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "PLACE_CLOSED",
+                      "details": {
+                        "businessStatus": "PERMANENTLY_CLOSED"
+                      }
+                    }
+                  },
+                  "cooldown": {
+                    "value": {
+                      "success": false,
+                      "message": "Chưa đủ 30 ngày.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "REVIEW_COOLDOWN",
+                      "details": {
+                        "retryAt": "2026-12-05T03:00:00Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Unprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/posts/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Post"
+        ],
+        "operationId": "getPost",
+        "summary": "Đọc Post qua quyền hiện hành",
+        "description": "GET với Viewer. Bài legacy tiếp tục yêu cầu JWT và kiểm quyền hiện hành. Với Post mới PUBLIC, guest có thể đọc. Bài FRIENDS bị ẩn nếu viewer không đủ quyền. Ngoại lệ ẩn danh chỉ có tại GET Place posts. Tác giả có thể đọc trạng thái bài chờ.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "actingFanpageId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "description": "Chỉ cho projection đọc theo ngữ cảnh Fanpage. Backend xác minh quyền quản trị và Official Fanpage đúng Place. Không phải actor để chấm hoặc tạo REVIEW."
+          }
+        ],
+        "x-srs-references": [
+          "FR-09",
+          "BR-09",
+          "AT-07",
+          "AT-30",
+          "AT-39"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostReadEnvelope"
+                },
+                "examples": {
+                  "friendsAuthor": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "postId": "review-102",
+                        "postType": "REVIEW",
+                        "visibility": "FRIENDS",
+                        "placeId": "place-25",
+                        "accessMode": "FULL",
+                        "author": {
+                          "id": "user-1"
+                        },
+                        "content": "Quán phù hợp học tập.",
+                        "publishStatus": "PUBLISHED",
+                        "permissions": {
+                          "canViewAuthor": true,
+                          "canReact": true,
+                          "canComment": true,
+                          "canRate": false
+                        },
+                        "review": {
+                          "authorScore": 4
+                        }
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "legacyPrivate": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "6afd9b4b-5367-433e-87c9-6d3a5848dea7",
+                        "authorId": "user-1",
+                        "content": "Bài cũ chưa gắn Place",
+                        "privacy": "PRIVATE",
+                        "mediaUrls": [],
+                        "createdAt": "2026-10-25T03:00:00Z",
+                        "commentCount": 0,
+                        "reactionCount": 0,
+                        "shareCount": 0,
+                        "pinned": false
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "ownerPending": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "postId": "review-103",
+                        "postType": "REVIEW",
+                        "placeProposalId": "proposal-17",
+                        "visibility": "FRIENDS",
+                        "publishStatus": "PENDING_PLACE",
+                        "editCount": 0,
+                        "version": 1,
+                        "accessMode": "OWNER_STATE"
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "private, no-store đối với response theo viewer hoặc context. Cache trung gian không dùng lại giữa người dùng.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Ẩn sự tồn tại của bài không có quyền đọc.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "hiddenFriendsReview": {
+                    "value": {
+                      "success": false,
+                      "message": "Không tìm thấy tài nguyên.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "RESOURCE_NOT_FOUND"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Post"
+        ],
+        "operationId": "updateLegacyPost",
+        "summary": "Cập nhật Post cũ",
+        "description": "Giữ PUT cho bài legacy. API trả 409 USE_TYPED_PATCH khi client dùng PUT cũ trên SHARE/REVIEW mới.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegacyUpdate"
+              },
+              "examples": {
+                "legacy": {
+                  "value": {
+                    "content": "Chỉnh nội dung bài cũ"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-10",
+          "BR-44",
+          "BR-45",
+          "AT-39"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyPostEnvelope"
+                },
+                "examples": {
+                  "updated": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "id": "6afd9b4b-5367-433e-87c9-6d3a5848dea7",
+                        "authorId": "user-1",
+                        "content": "Bài cũ chưa gắn Place",
+                        "privacy": "PRIVATE",
+                        "mediaUrls": [],
+                        "createdAt": "2026-10-25T03:00:00Z",
+                        "commentCount": 0,
+                        "reactionCount": 0,
+                        "shareCount": 0,
+                        "pinned": false
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Post"
+        ],
+        "operationId": "deletePost",
+        "summary": "Xóa bài theo quyền",
+        "description": "DELETE hiện hữu. Khi gỡ hoặc xóa REVIEW hợp lệ, post-service loại bài khỏi aggregate, fallback và giữ cooldown ledger. Actor phải có quyền xóa tại thời điểm yêu cầu.",
+        "x-srs-references": [
+          "BR-08",
+          "BR-22",
+          "AT-14"
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptySuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/posts/{id}/visibility": {
+      "patch": {
+        "tags": [
+          "Post"
+        ],
+        "operationId": "updatePostVisibility",
+        "summary": "Đổi quyền xem bài đã xuất bản",
+        "description": "Tác giả. Chỉ FRIENDS → PUBLIC sau xuất bản. Cùng giá trị có thể trả kết quả idempotent. PUBLIC → FRIENDS trả 409. Đổi quyền không có trường sửa nội dung; service kiểm trạng thái Place và quyền hiện hành.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisibilityPatch"
+              },
+              "examples": {
+                "publish": {
+                  "value": {
+                    "visibility": "PUBLIC",
+                    "expectedVersion": 3
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-09",
+          "BR-09",
+          "AT-30",
+          "AT-49"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostReadEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Hạ cấp quyền xem hoặc version xung đột.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "downgrade": {
+                    "value": {
+                      "success": false,
+                      "message": "Không thể chuyển PUBLIC thành FRIENDS sau xuất bản.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "VISIBILITY_DOWNGRADE_NOT_ALLOWED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Unprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/shares/{id}": {
+      "patch": {
+        "tags": [
+          "Post"
+        ],
+        "operationId": "patchShare",
+        "summary": "Sửa nội dung hoặc media của SHARE",
+        "description": "Chỉ tác giả SHARE đã xuất bản. Content và media dùng chung 2 lượt, tối đa một lượt mỗi Save có thay đổi. mediaIds gửi thì thay toàn bộ. Bỏ field nghĩa là giữ nguyên. Kiểm expectedVersion và Place trước khi ghi.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SharePatch"
+              },
+              "examples": {
+                "secondEdit": {
+                  "value": {
+                    "expectedVersion": 2,
+                    "content": "Cập nhật bài chia sẻ.",
+                    "mediaIds": []
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-08",
+          "BR-45",
+          "AT-47",
+          "AT-49"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareEditResultEnvelope"
+                },
+                "examples": {
+                  "edited": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "postId": "share-10",
+                        "editCount": 2,
+                        "remainingEdits": 0,
+                        "version": 3
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/Unprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/reviews/{id}": {
+      "patch": {
+        "tags": [
+          "Review"
+        ],
+        "operationId": "patchReview",
+        "summary": "Sửa REVIEW bằng một request nguyên tử",
+        "description": "ID Review dùng ID Post. Chỉ tác giả REVIEW PUBLISHED, tối đa hai lượt chung cho content, authorScore và attributes. Có attributes thì thay toàn bộ danh sách hiệu lực; [] xóa toàn bộ; vắng trường giữ nguyên. Kiểm version và Place; replay không trừ thêm lượt.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPatch"
+              },
+              "examples": {
+                "multipleFields": {
+                  "value": {
+                    "expectedVersion": 3,
+                    "content": "Đồ uống ngon hơn lần trước.",
+                    "authorScore": 5,
+                    "attributes": [
+                      {
+                        "attributeId": "drink-quality",
+                        "score": 5
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-10",
+          "BR-44",
+          "AT-15–21",
+          "AT-49"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewEditResultEnvelope"
+                },
+                "examples": {
+                  "lastEdit": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "reviewId": "review-102",
+                        "editCount": 2,
+                        "remainingEdits": 0,
+                        "version": 4,
+                        "ratingRecalculation": "APPLIED"
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Hết lượt sửa hoặc version cũ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "editsExhausted": {
+                    "value": {
+                      "success": false,
+                      "message": "Đã dùng hai lượt sửa.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "REVIEW_EDIT_LIMIT_REACHED",
+                      "details": {
+                        "currentVersion": 4,
+                        "editCount": 2
+                      }
+                    }
+                  },
+                  "stale": {
+                    "value": {
+                      "success": false,
+                      "message": "Phiên bản không còn hiện hành.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "CONCURRENT_MODIFICATION",
+                      "details": {
+                        "currentVersion": 4,
+                        "editCount": 2
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/Unprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/reviews/{id}/community-rating": {
+      "put": {
+        "tags": [
+          "Rating"
+        ],
+        "operationId": "putCommunityRating",
+        "summary": "Tạo hoặc đổi điểm cộng đồng",
+        "description": "User đủ quyền trên REVIEW PUBLISHED; một điểm hiện hành theo (reviewId, User JWT). Tác giả hoặc actor Fanpage không được chấm. Owner/Admin Fanpage được chấm bằng danh tính User cá nhân nếu đủ quyền. Đổi điểm không tăng số người chấm; đóng vĩnh viễn cấm ghi.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityRatingPut"
+              },
+              "examples": {
+                "five": {
+                  "value": {
+                    "score": 5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-srs-references": [
+          "FR-12",
+          "BR-06",
+          "D-01",
+          "AT-12",
+          "AT-13",
+          "AT-48",
+          "AT-49"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRatingEnvelope"
+                },
+                "examples": {
+                  "upserted": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "reviewId": "review-102",
+                        "authorScore": 4,
+                        "communityCount": 2,
+                        "communityAverage": 4,
+                        "reviewScore": 4,
+                        "weight": 2.5849625007,
+                        "myScore": 5,
+                        "summaryVersion": 7
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "description": "Viewer không có quyền tương tác hoặc tác giả tự chấm.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "self": {
+                    "value": {
+                      "success": false,
+                      "message": "Tác giả không thể chấm REVIEW của mình.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "SELF_RATING_NOT_ALLOWED"
+                    }
+                  },
+                  "blocked": {
+                    "value": {
+                      "success": false,
+                      "message": "Bạn không có quyền ghi đánh giá.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "PERMISSION_DENIED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "REVIEW không thể chấm do trạng thái/quyền của bài: 409 REVIEW_NOT_RATEABLE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "notRateable": {
+                    "value": {
+                      "success": false,
+                      "message": "REVIEW không thể nhận điểm.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "REVIEW_NOT_RATEABLE"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Điểm không phải số nguyên từ 1 đến 5: 422 INVALID_REVIEW_SCORE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "outOfRange": {
+                    "value": {
+                      "success": false,
+                      "message": "Điểm phải là số nguyên từ 1 đến 5.",
+                      "timestamp": "2026-11-16T02:00:00Z",
+                      "code": "INVALID_REVIEW_SCORE"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/reviews/{id}/rating-summary": {
+      "get": {
+        "tags": [
+          "Rating"
+        ],
+        "operationId": "getReviewRating",
+        "summary": "Xem điểm của REVIEW",
+        "description": "Viewer đủ quyền đọc REVIEW theo API trực tiếp. n=0 thì C null, P=A và w=1. Có vote thì P=(A+C)/2, w=1+log₂(1+n). myScore chỉ trả khi có quyền và ngữ cảnh account cá nhân phù hợp.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "name": "actingFanpageId",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "description": "Chỉ cho projection đọc theo ngữ cảnh Fanpage. Backend xác minh quyền quản trị và Official Fanpage đúng Place. Không phải actor để chấm hoặc tạo REVIEW."
+          }
+        ],
+        "x-srs-references": [
+          "FR-09",
+          "FR-13",
+          "BR-01",
+          "BR-02",
+          "AT-10",
+          "AT-11"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRatingEnvelope"
+                },
+                "examples": {
+                  "withoutVotes": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "reviewId": "review-102",
+                        "authorScore": 4,
+                        "communityCount": 0,
+                        "communityAverage": null,
+                        "reviewScore": 4,
+                        "weight": 1,
+                        "summaryVersion": 1
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  },
+                  "withVotes": {
+                    "value": {
+                      "success": true,
+                      "message": "OK",
+                      "data": {
+                        "reviewId": "review-102",
+                        "authorScore": 4,
+                        "communityCount": 2,
+                        "communityAverage": 4,
+                        "reviewScore": 4,
+                        "weight": 2.5849625007,
+                        "myScore": 5,
+                        "summaryVersion": 7
+                      },
+                      "timestamp": "2026-11-16T02:00:00Z"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "private, no-store đối với response theo viewer hoặc context. Cache trung gian không dùng lại giữa người dùng.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Access JWT của Auth. Gateway loại identity header do client gửi. Actor lấy từ context đã xác thực."
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Id"
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "Size": {
+        "name": "size",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": "Cùng actor/method/đích/key và payload thì replay kết quả trước. Cùng key khác payload trả 409. Backend cần đưa header vào CORS."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "JSON, path hoặc query sai cú pháp.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "Thiếu JWT trên route yêu cầu xác thực hoặc JWT đã gửi không hợp lệ.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Actor không đủ quyền, bị Block hoặc hành động bị hạn chế.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Không tồn tại hoặc tài nguyên cần ẩn sự tồn tại.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "HTTP 409 cho version/race/idempotency, cooldown, trạng thái Place/Review hoặc hạn mức chỉnh sửa; bao gồm REVIEW_NOT_RATEABLE.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unprocessable": {
+        "description": "Payload đúng cú pháp nhưng không hợp lệ về field/giá trị: VALIDATION_ERROR, INVALID_REVIEW_SCORE, INVALID_ATTRIBUTE, INVALID_POST_PAYLOAD.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Gateway áp dụng rate limit. Client retry theo Retry-After nếu header có mặt.",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Id": {
+        "type": "string",
+        "minLength": 1,
+        "description": "ID chuỗi không trong suốt. Post hiện tạo chuỗi UUID. Client giữ nguyên giá trị ID."
+      },
+      "Visibility": {
+        "type": "string",
+        "enum": [
+          "PUBLIC",
+          "FRIENDS"
+        ]
+      },
+      "LegacyPrivacy": {
+        "type": "string",
+        "enum": [
+          "PUBLIC",
+          "FRIENDS",
+          "PRIVATE",
+          "CUSTOM"
+        ]
+      },
+      "BusinessStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "TEMPORARILY_CLOSED",
+          "PERMANENTLY_CLOSED",
+          "RELOCATED"
+        ],
+        "description": "RELOCATED là trạng thái đọc dành cho P1. MVP dùng ba trạng thái còn lại."
+      },
+      "RecordStatus": {
+        "type": "string",
+        "enum": [
+          "ACTIVE",
+          "MERGED",
+          "ARCHIVED"
+        ],
+        "description": "Tách vòng đời bản ghi khỏi trạng thái kinh doanh. MERGED/ARCHIVED được dự phòng cho P1."
+      },
+      "ProposalStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "APPROVED",
+          "REJECTED"
+        ]
+      },
+      "PublishStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_PLACE",
+          "PUBLISHING",
+          "PUBLISHED",
+          "DISCARDED",
+          "DELETED"
+        ],
+        "description": "PUBLISHING là trạng thái kỹ thuật nếu BE dùng worker. Kết quả đọc công khai chỉ có PUBLISHED. Không có PENDING_CONFLICT."
+      },
+      "PlaceLocation": {
+        "type": "object",
+        "required": [
+          "address",
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -180,
+            "maximum": 180
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "properties": {
+              "latitude": {
+                "type": "null"
+              },
+              "longitude": {
+                "type": "null"
+              }
+            }
+          }
+        ]
+      },
+      "Place": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "primaryCategoryId",
+          "secondaryCategoryIds",
+          "businessStatus",
+          "recordStatus",
+          "location"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "primaryCategoryId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "secondaryCategoryIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "uniqueItems": true
+          },
+          "businessStatus": {
+            "$ref": "#/components/schemas/BusinessStatus"
+          },
+          "recordStatus": {
+            "$ref": "#/components/schemas/RecordStatus"
+          },
+          "location": {
+            "$ref": "#/components/schemas/PlaceLocation"
+          }
+        }
+      },
+      "PlacePatch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "primaryCategoryId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "secondaryCategoryIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "uniqueItems": true
+          },
+          "businessStatus": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "TEMPORARILY_CLOSED",
+              "PERMANENTLY_CLOSED"
+            ]
+          },
+          "location": {
+            "type": "object",
+            "required": [
+              "address",
+              "latitude",
+              "longitude"
+            ],
+            "properties": {
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "latitude": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "longitude": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "minProperties": 1,
+        "additionalProperties": false,
+        "description": "ADMIN P0. Không có cập nhật RELOCATED hay merge bản ghi."
+      },
+      "ProposalCreate": {
+        "type": "object",
+        "required": [
+          "name",
+          "primaryCategoryId",
+          "imageIds"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "primaryCategoryId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "secondaryCategoryIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "uniqueItems": true
+          },
+          "imageIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
+        },
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "address"
+            ]
+          },
+          {
+            "required": [
+              "latitude",
+              "longitude"
+            ]
+          }
+        ],
+        "dependentRequired": {
+          "latitude": [
+            "longitude"
+          ],
+          "longitude": [
+            "latitude"
+          ]
+        },
+        "description": "Ảnh phải thuộc media đã upload và có quyền dùng. Chấp nhận địa chỉ hoặc cặp tọa độ, hoặc cả hai."
+      },
+      "Proposal": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "name",
+          "primaryCategoryId",
+          "imageIds",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProposalStatus"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "primaryCategoryId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "secondaryCategoryIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            }
+          },
+          "imageIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "minItems": 1
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "rejectionReason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "dependentRequired": {
+          "latitude": [
+            "longitude"
+          ],
+          "longitude": [
+            "latitude"
+          ]
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "APPROVED"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "placeId"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "REJECTED"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "rejectionReason"
+              ]
+            }
+          }
+        ]
+      },
+      "ProposalDecision": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "decision"
+            ],
+            "properties": {
+              "decision": {
+                "const": "APPROVE"
+              },
+              "location": {
+                "type": "object",
+                "required": [
+                  "address",
+                  "latitude",
+                  "longitude"
+                ],
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "description": "Có thể dùng vị trí đã có đủ địa chỉ và tọa độ nếu Admin kiểm và xác nhận. Gửi location để bổ sung hoặc hiệu chỉnh. Backend kiểm đủ dữ liệu trước khi duyệt."
+          },
+          {
+            "type": "object",
+            "required": [
+              "decision",
+              "reason"
+            ],
+            "properties": {
+              "decision": {
+                "const": "REJECT"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Answer": {
+        "type": "object",
+        "required": [
+          "attributeId",
+          "score"
+        ],
+        "properties": {
+          "attributeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Sao nguyên từ 1 đến 5."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReviewInput": {
+        "type": "object",
+        "required": [
+          "authorScore"
+        ],
+        "properties": {
+          "authorScore": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Sao nguyên từ 1 đến 5."
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Answer"
+            },
+            "maxItems": 12,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ShareCreate": {
+        "type": "object",
+        "required": [
+          "postType",
+          "visibility"
+        ],
+        "properties": {
+          "postType": {
+            "const": "SHARE"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "placeProposalId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "mediaIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "maxItems": 20,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "placeId"
+            ],
+            "not": {
+              "required": [
+                "placeProposalId"
+              ]
+            }
+          },
+          {
+            "required": [
+              "placeProposalId"
+            ],
+            "not": {
+              "required": [
+                "placeId"
+              ]
+            }
+          }
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "content"
+            ]
+          },
+          {
+            "required": [
+              "mediaIds"
+            ],
+            "properties": {
+              "mediaIds": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      },
+      "ReviewCreate": {
+        "type": "object",
+        "required": [
+          "postType",
+          "visibility",
+          "review"
+        ],
+        "properties": {
+          "postType": {
+            "const": "REVIEW"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "placeProposalId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "mediaIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "maxItems": 20,
+            "uniqueItems": true
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewInput"
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "placeId"
+            ],
+            "not": {
+              "required": [
+                "placeProposalId"
+              ]
+            }
+          },
+          {
+            "required": [
+              "placeProposalId"
+            ],
+            "not": {
+              "required": [
+                "placeId"
+              ]
+            }
+          }
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "content"
+            ]
+          },
+          {
+            "required": [
+              "mediaIds"
+            ],
+            "properties": {
+              "mediaIds": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      },
+      "LegacyCreate": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mediaUrls": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "privacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyPrivacy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "groupId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pageId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "customAudienceUserIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Id"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "taggedUserIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Id"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "postType"
+              ]
+            },
+            {
+              "required": [
+                "placeId"
+              ]
+            },
+            {
+              "required": [
+                "placeProposalId"
+              ]
+            },
+            {
+              "required": [
+                "visibility"
+              ]
+            },
+            {
+              "required": [
+                "review"
+              ]
+            },
+            {
+              "required": [
+                "mediaIds"
+              ]
+            },
+            {
+              "required": [
+                "authorId"
+              ]
+            },
+            {
+              "required": [
+                "raterId"
+              ]
+            }
+          ]
+        },
+        "anyOf": [
+          {
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          },
+          {
+            "required": [
+              "mediaUrls"
+            ],
+            "properties": {
+              "mediaUrls": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        ],
+        "description": "Payload của client cũ trong giai đoạn chuyển đổi do server quản lý. Sau cutover, POST mới theo hợp đồng có postType và Place hoặc Proposal. Không đổi nghĩa privacy của dữ liệu cũ."
+      },
+      "PostCreate": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ShareCreate"
+          },
+          {
+            "$ref": "#/components/schemas/ReviewCreate"
+          },
+          {
+            "$ref": "#/components/schemas/LegacyCreate"
+          }
+        ]
+      },
+      "LegacyUpdate": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mediaUrls": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "privacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyPrivacy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "customAudienceUserIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Id"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "taggedUserIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Id"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Chỉ dùng cho bản ghi legacy. Null theo hành vi hiện tại là giữ nguyên.",
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "postType"
+              ]
+            },
+            {
+              "required": [
+                "placeId"
+              ]
+            },
+            {
+              "required": [
+                "placeProposalId"
+              ]
+            },
+            {
+              "required": [
+                "visibility"
+              ]
+            },
+            {
+              "required": [
+                "review"
+              ]
+            },
+            {
+              "required": [
+                "mediaIds"
+              ]
+            },
+            {
+              "required": [
+                "authorId"
+              ]
+            },
+            {
+              "required": [
+                "raterId"
+              ]
+            }
+          ]
+        }
+      },
+      "LegacyPost": {
+        "type": "object",
+        "required": [
+          "id",
+          "authorId",
+          "privacy",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "authorId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mediaUrls": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "privacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyPrivacy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "groupId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pageId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "customAudienceUserIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Id"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "taggedUserIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Id"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sharedPostId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sharedReelId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "commentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reactionCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "shareCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
+        "not": {
+          "required": [
+            "accessMode"
+          ]
+        },
+        "description": "Wire shape hiện hành cho bài legacy. Bản cũ không bị gán Place hoặc đổi privacy."
+      },
+      "Author": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Permissions": {
+        "type": "object",
+        "required": [
+          "canViewAuthor",
+          "canReact",
+          "canComment",
+          "canRate"
+        ],
+        "properties": {
+          "canViewAuthor": {
+            "type": "boolean"
+          },
+          "canReact": {
+            "type": "boolean"
+          },
+          "canComment": {
+            "type": "boolean"
+          },
+          "canRate": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostFull": {
+        "type": "object",
+        "required": [
+          "postId",
+          "postType",
+          "visibility",
+          "placeId",
+          "accessMode",
+          "author",
+          "permissions",
+          "publishStatus"
+        ],
+        "properties": {
+          "postType": {
+            "type": "string",
+            "enum": [
+              "SHARE",
+              "REVIEW"
+            ]
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "postId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "content": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "accessMode": {
+            "const": "FULL"
+          },
+          "author": {
+            "$ref": "#/components/schemas/Author"
+          },
+          "mediaUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/Permissions"
+          },
+          "publishStatus": {
+            "const": "PUBLISHED"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewInput"
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "postType": {
+                  "const": "REVIEW"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "review"
+              ]
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "review"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "AnonymousReview": {
+        "type": "object",
+        "required": [
+          "postId",
+          "postType",
+          "visibility",
+          "placeId",
+          "accessMode",
+          "author",
+          "authorDisplay",
+          "publishStatus",
+          "permissions"
+        ],
+        "properties": {
+          "postId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "postType": {
+            "const": "REVIEW"
+          },
+          "visibility": {
+            "const": "FRIENDS"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "accessMode": {
+            "const": "ANONYMOUS_READ_ONLY"
+          },
+          "author": {
+            "type": "null"
+          },
+          "authorDisplay": {
+            "const": "Người dùng ẩn danh"
+          },
+          "content": {
+            "type": "string"
+          },
+          "publishStatus": {
+            "const": "PUBLISHED"
+          },
+          "permissions": {
+            "type": "object",
+            "required": [
+              "canViewAuthor",
+              "canReact",
+              "canComment",
+              "canRate"
+            ],
+            "properties": {
+              "canViewAuthor": {
+                "const": false
+              },
+              "canReact": {
+                "const": false
+              },
+              "canComment": {
+                "const": false
+              },
+              "canRate": {
+                "const": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "description": "Chỉ ở danh sách Post tại Place. Projection không có authorId, mediaUrls, profile link, participant hoặc danh tính bình luận."
+      },
+      "PostRead": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PostFull"
+          },
+          {
+            "$ref": "#/components/schemas/LegacyPost"
+          },
+          {
+            "$ref": "#/components/schemas/PostOwnerState"
+          }
+        ]
+      },
+      "PlacePostRead": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PostFull"
+          },
+          {
+            "$ref": "#/components/schemas/AnonymousReview"
+          }
+        ]
+      },
+      "PostCreated": {
+        "type": "object",
+        "required": [
+          "postId",
+          "postType",
+          "visibility",
+          "publishStatus",
+          "editCount",
+          "version"
+        ],
+        "properties": {
+          "postId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "postType": {
+            "type": "string",
+            "enum": [
+              "SHARE",
+              "REVIEW"
+            ]
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "placeProposalId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "publishStatus": {
+            "$ref": "#/components/schemas/PublishStatus"
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "placeId"
+            ],
+            "not": {
+              "required": [
+                "placeProposalId"
+              ]
+            }
+          },
+          {
+            "required": [
+              "placeProposalId"
+            ],
+            "not": {
+              "required": [
+                "placeId"
+              ]
+            }
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "publishStatus": {
+                  "const": "PENDING_PLACE"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "placeProposalId"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "publishStatus": {
+                  "const": "PUBLISHED"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "placeId"
+              ]
+            }
+          }
+        ]
+      },
+      "ReviewPatch": {
+        "type": "object",
+        "required": [
+          "expectedVersion"
+        ],
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "authorScore": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Sao nguyên từ 1 đến 5."
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Answer"
+            },
+            "maxItems": 12,
+            "uniqueItems": true
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "content"
+            ]
+          },
+          {
+            "required": [
+              "authorScore"
+            ]
+          },
+          {
+            "required": [
+              "attributes"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      },
+      "SharePatch": {
+        "type": "object",
+        "required": [
+          "expectedVersion"
+        ],
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "mediaIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Id"
+            },
+            "maxItems": 20,
+            "uniqueItems": true
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "content"
+            ]
+          },
+          {
+            "required": [
+              "mediaIds"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      },
+      "ReviewEditResult": {
+        "type": "object",
+        "required": [
+          "reviewId",
+          "editCount",
+          "remainingEdits",
+          "version",
+          "ratingRecalculation"
+        ],
+        "properties": {
+          "reviewId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "remainingEdits": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ratingRecalculation": {
+            "type": "string",
+            "enum": [
+              "APPLIED",
+              "NOT_NEEDED"
+            ]
+          }
+        }
+      },
+      "ShareEditResult": {
+        "type": "object",
+        "required": [
+          "postId",
+          "editCount",
+          "remainingEdits",
+          "version"
+        ],
+        "properties": {
+          "postId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "remainingEdits": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "VisibilityPatch": {
+        "type": "object",
+        "required": [
+          "visibility",
+          "expectedVersion"
+        ],
+        "properties": {
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "CommunityRatingPut": {
+        "type": "object",
+        "required": [
+          "score"
+        ],
+        "properties": {
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Sao nguyên từ 1 đến 5."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReviewRating": {
+        "type": "object",
+        "required": [
+          "reviewId",
+          "authorScore",
+          "communityCount",
+          "communityAverage",
+          "reviewScore",
+          "weight",
+          "summaryVersion"
+        ],
+        "properties": {
+          "reviewId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "authorScore": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Sao nguyên từ 1 đến 5."
+          },
+          "communityCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "communityAverage": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "reviewScore": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 1
+          },
+          "myScore": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "summaryVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "communityCount": {
+                  "const": 0
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "communityAverage": {
+                  "type": "null"
+                },
+                "weight": {
+                  "const": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "communityAverage": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "PlaceRating": {
+        "type": "object",
+        "required": [
+          "placeId",
+          "rating",
+          "nReview",
+          "summaryVersion"
+        ],
+        "properties": {
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "rating": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "nReview": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "summaryVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "nReview": {
+                  "const": 0
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "rating": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "rating": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AttributeResult": {
+        "type": "object",
+        "required": [
+          "attributeId",
+          "name",
+          "averageScore",
+          "respondents"
+        ],
+        "properties": {
+          "attributeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "averageScore": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "respondents": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "positiveRatio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "negativeRatio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "positiveRatio"
+            ],
+            "not": {
+              "required": [
+                "negativeRatio"
+              ]
+            }
+          },
+          {
+            "required": [
+              "negativeRatio"
+            ],
+            "not": {
+              "required": [
+                "positiveRatio"
+              ]
+            }
+          }
+        ]
+      },
+      "PlaceAttributes": {
+        "type": "object",
+        "required": [
+          "placeId",
+          "advantages",
+          "disadvantages",
+          "hasMore"
+        ],
+        "properties": {
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "advantages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeResult"
+            }
+          },
+          "disadvantages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeResult"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "LoginResult": {
+        "type": "object",
+        "required": [
+          "accountId",
+          "email",
+          "accessToken",
+          "refreshToken"
+        ],
+        "properties": {
+          "accountId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "timestamp"
+        ],
+        "properties": {
+          "success": {
+            "const": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_ERROR",
+              "UNAUTHENTICATED",
+              "PERMISSION_DENIED",
+              "PLACE_NOT_FOUND",
+              "RESOURCE_NOT_FOUND",
+              "BAD_REQUEST",
+              "INVALID_LOCATION",
+              "INVALID_PLACE_REFERENCE",
+              "INVALID_VISIBILITY",
+              "INVALID_POST_PAYLOAD",
+              "INVALID_ATTRIBUTE",
+              "INVALID_REVIEW_SCORE",
+              "PLACE_CLOSED",
+              "REVIEW_NOT_RATEABLE",
+              "SELF_RATING_NOT_ALLOWED",
+              "REVIEW_COOLDOWN",
+              "REVIEW_EDIT_LIMIT_REACHED",
+              "SHARE_EDIT_LIMIT_REACHED",
+              "PROPOSAL_ALREADY_DECIDED",
+              "CONCURRENT_MODIFICATION",
+              "VISIBILITY_DOWNGRADE_NOT_ALLOWED",
+              "IDEMPOTENCY_KEY_REUSED",
+              "USE_TYPED_PATCH",
+              "RATE_LIMITED"
+            ]
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "currentVersion": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "editCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2
+              },
+              "retryAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "businessStatus": {
+                "$ref": "#/components/schemas/BusinessStatus"
+              },
+              "fieldErrors": {
+                "type": "object",
+                "description": "Lỗi validation theo tên trường; không lộ dữ liệu nhạy cảm.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "description": "code là mã ổn định cho nhánh API mới. Gateway hoặc API legacy có thể chỉ trả message. details chỉ trả dữ liệu người gọi có quyền xem."
+      },
+      "PostOwnerState": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "postType": {
+            "type": "string",
+            "enum": [
+              "SHARE",
+              "REVIEW"
+            ]
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "placeId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "placeProposalId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "publishStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING_PLACE",
+              "PUBLISHING",
+              "DISCARDED"
+            ]
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "accessMode": {
+            "const": "OWNER_STATE"
+          },
+          "discardReason": {
+            "type": "string",
+            "enum": [
+              "PROPOSAL_REJECTED",
+              "REVIEW_COOLDOWN"
+            ]
+          }
+        },
+        "required": [
+          "postId",
+          "postType",
+          "visibility",
+          "publishStatus",
+          "editCount",
+          "version",
+          "accessMode"
+        ],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "placeId"
+            ],
+            "not": {
+              "required": [
+                "placeProposalId"
+              ]
+            }
+          },
+          {
+            "required": [
+              "placeProposalId"
+            ],
+            "not": {
+              "required": [
+                "placeId"
+              ]
+            }
+          }
+        ],
+        "description": "Chỉ tác giả được xem trạng thái xử lý bài chưa xuất bản. Không đưa vào feed, profile, search hoặc Place list."
+      },
+      "PostCreateResult": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PostCreated"
+          },
+          {
+            "$ref": "#/components/schemas/LegacyPost"
+          }
+        ]
+      },
+      "PlaceEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "ProposalEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Proposal"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "PostReadEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PostRead"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "PostCreateResultEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PostCreateResult"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "ReviewEditResultEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReviewEditResult"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "ShareEditResultEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ShareEditResult"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "ReviewRatingEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReviewRating"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "PlaceRatingEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PlaceRating"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "PlaceAttributesEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PlaceAttributes"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "LegacyPostEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LegacyPost"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "LoginResultEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LoginResult"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "PlacePageEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "totalElements": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "last": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "content",
+              "page",
+              "size",
+              "totalElements",
+              "totalPages",
+              "last"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "PlacePostPageEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PlacePostRead"
+                }
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "totalElements": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "last": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "content",
+              "page",
+              "size",
+              "totalElements",
+              "totalPages",
+              "last"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "timestamp"
+        ]
+      },
+      "EmptySuccess": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "timestamp"
+        ]
+      }
+    }
+  },
+  "x-schema-test-cases": [
+    {
+      "id": "post-two-targets",
+      "schema": "PostCreate",
+      "expectedValid": false,
+      "payload": {
+        "postType": "REVIEW",
+        "placeId": "place-25",
+        "visibility": "FRIENDS",
+        "content": "Quán có đồ uống ngon, phù hợp học tập.",
+        "mediaIds": [
+          "media-01"
+        ],
+        "review": {
+          "authorScore": 4,
+          "attributes": [
+            {
+              "attributeId": "drink-quality",
+              "score": 5
+            }
+          ]
+        },
+        "placeProposalId": "proposal-17"
+      },
+      "http": 422,
+      "code": "INVALID_PLACE_REFERENCE"
+    },
+    {
+      "id": "share-with-review",
+      "schema": "PostCreate",
+      "expectedValid": false,
+      "payload": {
+        "postType": "SHARE",
+        "placeId": "place-25",
+        "visibility": "PUBLIC",
+        "content": "Quán đang sửa, mình hẹn dịp khác.",
+        "review": {
+          "authorScore": 3
+        }
+      },
+      "http": 422,
+      "code": "INVALID_POST_PAYLOAD"
+    },
+    {
+      "id": "typed-private",
+      "schema": "PostCreate",
+      "expectedValid": false,
+      "payload": {
+        "postType": "REVIEW",
+        "placeId": "place-25",
+        "visibility": "PRIVATE",
+        "content": "Quán có đồ uống ngon, phù hợp học tập.",
+        "mediaIds": [
+          "media-01"
+        ],
+        "review": {
+          "authorScore": 4,
+          "attributes": [
+            {
+              "attributeId": "drink-quality",
+              "score": 5
+            }
+          ]
+        }
+      },
+      "http": 422,
+      "code": "INVALID_VISIBILITY"
+    },
+    {
+      "id": "legacy-private",
+      "schema": "PostCreate",
+      "expectedValid": true,
+      "payload": {
+        "content": "Bài legacy",
+        "privacy": "PRIVATE"
+      }
+    },
+    {
+      "id": "legacy-response",
+      "schema": "PostReadEnvelope",
+      "expectedValid": true,
+      "payload": {
+        "success": true,
+        "message": "OK",
+        "data": {
+          "id": "6afd9b4b-5367-433e-87c9-6d3a5848dea7",
+          "authorId": "user-1",
+          "content": "Bài cũ chưa gắn Place",
+          "privacy": "PRIVATE",
+          "mediaUrls": [],
+          "createdAt": "2026-10-25T03:00:00Z",
+          "commentCount": 0,
+          "reactionCount": 0,
+          "shareCount": 0,
+          "pinned": false
+        },
+        "timestamp": "2026-11-16T02:00:00Z"
+      }
+    },
+    {
+      "id": "missing-proposal-photo",
+      "schema": "ProposalCreate",
+      "expectedValid": false,
+      "payload": {
+        "name": "Place",
+        "address": "Đường A",
+        "primaryCategoryId": "cafe",
+        "imageIds": []
+      },
+      "http": 422,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "id": "geo-bad-latitude",
+      "schema": "ProposalCreate",
+      "expectedValid": false,
+      "payload": {
+        "name": "Place",
+        "imageIds": [
+          "media-01"
+        ],
+        "primaryCategoryId": "cafe",
+        "latitude": 106.659,
+        "longitude": 10.7735
+      },
+      "http": 422,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "id": "geo-coordinate-pair",
+      "schema": "ProposalCreate",
+      "expectedValid": false,
+      "payload": {
+        "name": "Place",
+        "imageIds": [
+          "media-01"
+        ],
+        "primaryCategoryId": "cafe",
+        "address": "Đường A",
+        "latitude": 10.77
+      },
+      "http": 422,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "id": "rating-above-five",
+      "schema": "CommunityRatingPut",
+      "expectedValid": false,
+      "payload": {
+        "score": 6
+      },
+      "http": 422,
+      "code": "INVALID_REVIEW_SCORE"
+    },
+    {
+      "id": "rating-fraction",
+      "schema": "CommunityRatingPut",
+      "expectedValid": false,
+      "payload": {
+        "score": 4.5
+      },
+      "http": 422,
+      "code": "INVALID_REVIEW_SCORE"
+    },
+    {
+      "id": "rating-valid-integer",
+      "schema": "CommunityRatingPut",
+      "expectedValid": true,
+      "payload": {
+        "score": 5
+      }
+    },
+    {
+      "id": "review-identity-injection",
+      "schema": "ReviewPatch",
+      "expectedValid": false,
+      "payload": {
+        "expectedVersion": 2,
+        "authorId": "user-other",
+        "content": "Test"
+      },
+      "http": 422,
+      "code": "INVALID_POST_PAYLOAD"
+    },
+    {
+      "id": "anonymous-post-valid",
+      "schema": "PlacePostRead",
+      "expectedValid": true,
+      "payload": {
+        "postId": "review-102",
+        "postType": "REVIEW",
+        "visibility": "FRIENDS",
+        "placeId": "place-25",
+        "accessMode": "ANONYMOUS_READ_ONLY",
+        "author": null,
+        "authorDisplay": "Người dùng ẩn danh",
+        "content": "Quán phù hợp học tập.",
+        "publishStatus": "PUBLISHED",
+        "permissions": {
+          "canViewAuthor": false,
+          "canReact": false,
+          "canComment": false,
+          "canRate": false
+        }
+      }
+    },
+    {
+      "id": "anonymous-post-leaks-author",
+      "schema": "PlacePostRead",
+      "expectedValid": false,
+      "payload": {
+        "postId": "review-102",
+        "postType": "REVIEW",
+        "visibility": "FRIENDS",
+        "placeId": "place-25",
+        "accessMode": "ANONYMOUS_READ_ONLY",
+        "author": null,
+        "authorDisplay": "Người dùng ẩn danh",
+        "content": "Quán phù hợp học tập.",
+        "publishStatus": "PUBLISHED",
+        "permissions": {
+          "canViewAuthor": false,
+          "canReact": false,
+          "canComment": false,
+          "canRate": false
+        },
+        "authorId": "user-1"
+      }
+    },
+    {
+      "id": "anonymous-post-leaks-media",
+      "schema": "PlacePostRead",
+      "expectedValid": false,
+      "payload": {
+        "postId": "review-102",
+        "postType": "REVIEW",
+        "visibility": "FRIENDS",
+        "placeId": "place-25",
+        "accessMode": "ANONYMOUS_READ_ONLY",
+        "author": null,
+        "authorDisplay": "Người dùng ẩn danh",
+        "content": "Quán phù hợp học tập.",
+        "publishStatus": "PUBLISHED",
+        "permissions": {
+          "canViewAuthor": false,
+          "canReact": false,
+          "canComment": false,
+          "canRate": false
+        },
+        "mediaUrls": [
+          "https://example.invalid/private-image"
+        ]
+      }
+    },
+    {
+      "id": "anonymous-post-wrong-context",
+      "schema": "PostRead",
+      "expectedValid": false,
+      "payload": {
+        "postId": "review-102",
+        "postType": "REVIEW",
+        "visibility": "FRIENDS",
+        "placeId": "place-25",
+        "accessMode": "ANONYMOUS_READ_ONLY",
+        "author": null,
+        "authorDisplay": "Người dùng ẩn danh",
+        "content": "Quán phù hợp học tập.",
+        "publishStatus": "PUBLISHED",
+        "permissions": {
+          "canViewAuthor": false,
+          "canReact": false,
+          "canComment": false,
+          "canRate": false
+        }
+      }
+    },
+    {
+      "id": "bad-null-community-average",
+      "schema": "ReviewRating",
+      "expectedValid": false,
+      "payload": {
+        "reviewId": "review-102",
+        "authorScore": 4,
+        "communityCount": 0,
+        "communityAverage": 4,
+        "reviewScore": 4,
+        "weight": 1,
+        "summaryVersion": 1
+      }
+    },
+    {
+      "id": "invalid-p0-relocated-update",
+      "schema": "PlacePatch",
+      "expectedValid": false,
+      "payload": {
+        "businessStatus": "RELOCATED"
+      },
+      "http": 422,
+      "code": "VALIDATION_ERROR"
+    }
+  ],
+  "x-runtime-acceptance": [
+    {
+      "id": "privacy-friends-context",
+      "expect": "Stranger đọc REVIEW FRIENDS tại Place nhận DTO ẩn danh. Truy cập trực tiếp trả 404. Feed/Profile vắng bài. Fanpage khác Place không nhận định danh. Verify URL media không lộ qua cache.",
+      "refs": [
+        "AT-06",
+        "AT-07",
+        "AT-09",
+        "AT-30"
+      ]
+    },
+    {
+      "id": "privacy-no-downgrade",
+      "expect": "Bài PUBLIC đã xuất bản, gửi FRIENDS -> 409 VISIBILITY_DOWNGRADE_NOT_ALLOWED. Bài FRIENDS gửi PUBLIC hợp lệ.",
+      "refs": [
+        "AT-30"
+      ]
+    },
+    {
+      "id": "place-operating-status",
+      "expect": "TEMPORARILY_CLOSED: SHARE 201, REVIEW 409 PLACE_CLOSED. PERMANENTLY_CLOSED: lịch sử vẫn GET 200 theo quyền, tạo/sửa bài mới, chấm điểm và tương tác mới bị chặn.",
+      "refs": [
+        "AT-23",
+        "AT-49"
+      ]
+    },
+    {
+      "id": "community-rating-auth",
+      "expect": "Tác giả tự chấm -> 403 SELF_RATING_NOT_ALLOWED. Đổi score 3→5 của cùng User giữ n. Actor Fanpage bị từ chối và User cá nhân đủ quyền vẫn được chấm.",
+      "refs": [
+        "AT-12",
+        "AT-13",
+        "AT-48"
+      ]
+    },
+    {
+      "id": "proposal-idempotency-and-cooldown",
+      "expect": "Lặp approve -> một Place và một lần publish mỗi Post hợp lệ. REVIEW chờ vi phạm 30×24h -> DISCARDED và thông báo một lần.",
+      "refs": [
+        "AT-03",
+        "AT-22"
+      ]
+    },
+    {
+      "id": "legacy-migration",
+      "expect": "Bản ghi cũ không Place đọc qua GET với JWT và đúng ID/author/media/privacy. Người ngoài vẫn không đọc được PRIVATE/CUSTOM ngoài allow-list.",
+      "refs": [
+        "AT-39"
+      ]
+    }
+  ],
+  "x-http-status-policy": {
+    "400": "BAD_REQUEST: JSON, path/query sai cú pháp",
+    "403": "PERMISSION_DENIED/SELF_RATING_NOT_ALLOWED",
+    "409": "PLACE_CLOSED, REVIEW_NOT_RATEABLE, REVIEW_COOLDOWN, PROPOSAL_ALREADY_DECIDED, CONCURRENT_MODIFICATION, giới hạn lượt sửa/idempotency",
+    "422": "VALIDATION_ERROR (details.fieldErrors), INVALID_REVIEW_SCORE, INVALID_ATTRIBUTE và payload bất hợp lệ khác",
+    "scope": "Hợp đồng đặc tả; không thay thế kiểm thử runtime và không bao gồm /api/auth/register."
+  }
+}
